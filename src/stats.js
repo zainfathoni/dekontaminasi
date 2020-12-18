@@ -30,11 +30,14 @@ function updateCovid19Stats(metadata) {
     updateNational();
     updateProvinces();
 
-    const progressNationalStats = JSON.parse(fs.readFileSync(prefix + 'progress-national.json', 'utf-8').toString())
+    const progressNationalRaw = JSON.parse(fs.readFileSync(prefix + 'progress-national.json', 'utf-8').toString())
+    const progressNationalStats = progressNationalRaw.history
         .filter((s) => s.name === 'Indonesia')
         .filter((s) => s.numbers && typeof s.numbers.infected === 'number')
         .sort((p, q) => p.timestamp - q.timestamp);
     const nationalStats = progressNationalStats.slice(-1).pop();
+    // updatedAt is of Jakarta time (WIB, GMT+7) in 'YYYY-MM-DD HH:mm:ss' format
+    const updatedAt = Date.parse(progressNationalRaw.updatedAt.concat('+0700'));
 
     const provincesStats = JSON.parse(fs.readFileSync(prefix + 'provinces.json', 'utf-8').toString())
         .filter((p) => p.name !== 'Indonesia')
@@ -50,7 +53,7 @@ function updateCovid19Stats(metadata) {
         .sort((p, q) => p.name.localeCompare(q.name));
     fs.writeFileSync(prefix + 'provinces.json', JSON.stringify(provincesStats, null, 2));
 
-    const stats = { ...nationalStats, regions: provincesStats.sort((p, q) => q.numbers.infected - p.numbers.infected) };
+    const stats = { ...nationalStats, timestamp: updatedAt, regions: provincesStats.sort((p, q) => q.numbers.infected - p.numbers.infected) };
     fs.writeFileSync(prefix + 'stats', JSON.stringify(stats, null, 2));
 
     const timestampName = prefix + 'stats.timestamp';
